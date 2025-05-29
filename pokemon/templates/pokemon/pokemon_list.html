@@ -1,0 +1,222 @@
+{% extends 'pokemon/base.html' %}
+
+{% block title %}Pokedex - All Pokémon{% endblock %}
+
+{% block content %}
+<!-- Search and Filter Section -->
+<div class="search-container">
+    <form method="GET" class="row g-3">
+        <div class="col-md-4">
+            <label for="search" class="form-label text-white">Search Pokémon</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_search }}" placeholder="Name or ID...">
+        </div>
+        
+        <div class="col-md-3">
+            <label for="type" class="form-label text-white">Filter by Type</label>
+            <select class="form-select" id="type" name="type">
+                <option value="">All Types</option>
+                {% for pokemon_type in pokemon_types %}
+                    <option value="{{ pokemon_type.name }}" 
+                            {% if current_type == pokemon_type.name %}selected{% endif %}>
+                        {{ pokemon_type.name|title }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="generation" class="form-label text-white">Generation</label>
+            <select class="form-select" id="generation" name="generation">
+                <option value="">All</option>
+                <option value="1" {% if current_generation == '1' %}selected{% endif %}>Gen 1 (1-151)</option>
+                <option value="2" {% if current_generation == '2' %}selected{% endif %}>Gen 2 (152-251)</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="sort" class="form-label text-white">Sort by</label>
+            <select class="form-select" id="sort" name="sort">
+                <option value="pokedex_id" {% if current_sort == 'pokedex_id' %}selected{% endif %}>ID</option>
+                <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name</option>
+                <option value="hp" {% if current_sort == 'hp' %}selected{% endif %}>HP</option>
+                <option value="attack" {% if current_sort == 'attack' %}selected{% endif %}>Attack</option>
+                <option value="defense" {% if current_sort == 'defense' %}selected{% endif %}>Defense</option>
+                <option value="speed" {% if current_sort == 'speed' %}selected{% endif %}>Speed</option>
+            </select>
+        </div>
+        
+        <div class="col-md-1">
+            <label class="form-label text-white">&nbsp;</label>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="reverse" name="reverse" value="true"
+                       {% if is_reverse %}checked{% endif %}>
+                <label class="form-check-label text-white" for="reverse">
+                    Reverse
+                </label>
+            </div>
+        </div>
+        
+        <div class="col-12">
+            <button type="submit" class="btn btn-pokemon me-2">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <a href="{% url 'pokemon:list' %}" class="btn btn-outline-light">
+                <i class="fas fa-times"></i> Clear
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Results Summary -->
+<div class="row mb-4">
+    <div class="col-12 ">
+        <div class="alert alert-info d-flex justify-content-between align-items-center search-result ">
+            <span>
+                <i class="fas fa-info-circle "></i>
+                Found {{ paginator.count }} Pokémon
+                {% if current_search %}matching "{{ current_search }}"{% endif %}
+                {% if current_type %}of type {{ current_type|title }}{% endif %}
+            </span>
+            <small class="text-muted">
+                Page {{ page_obj.number }} of {{ paginator.num_pages }}
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Pokemon Grid -->
+<div class="row">
+    {% for pokemon in pokemon_list %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="card pokemon-card h-100 position-relative">
+                <!-- Favorite Button -->
+                <button class="favorite-btn" onclick="toggleFavorite({{ pokemon.pokedex_id }}, this)">
+                    <i class="far fa-heart"></i>
+                </button>
+                
+                <!-- Pokemon Image -->
+                <div class="text-center p-3">
+                    {% if pokemon.official_artwork %}
+                        <img src="{{ pokemon.official_artwork }}" 
+                             alt="{{ pokemon.name }}" 
+                             class="pokemon-sprite"
+                             style="width: 150px; height: 150px; object-fit: contain;">
+                    {% elif pokemon.sprite_front %}
+                        <img src="{{ pokemon.sprite_front }}" 
+                             alt="{{ pokemon.name }}" 
+                             class="pokemon-sprite"
+                             style="width: 100px; height: 100px; object-fit: contain;">
+                    {% else %}
+                        <div class="bg-light rounded d-flex align-items-center justify-content-center"
+                             style="width: 150px; height: 150px; margin: 0 auto;">
+                            <i class="fas fa-dragon fa-3x text-muted"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body d-flex flex-column">
+                    <!-- Pokemon Info -->
+                    <div class="text-center mb-2">
+                        <h5 class="card-title mb-1">{{ pokemon.name|title }}</h5>
+                        <small class="text-muted">#{{ pokemon.pokedex_id|stringformat:"03d" }}</small>
+                    </div>
+                    
+                    <!-- Types -->
+                    <div class="text-center mb-3">
+                        {% for type in pokemon.types.all %}
+                            <span class="type-badge me-1" 
+                                  style="background-color: {{ type.color }};">
+                                {{ type.name|title }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="small mb-3">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <strong>{{ pokemon.hp }}</strong><br>
+                                <small class="text-muted">HP</small>
+                            </div>
+                            <div class="col-4">
+                                <strong>{{ pokemon.attack }}</strong><br>
+                                <small class="text-muted">ATK</small>
+                            </div>
+                            <div class="col-4">
+                                <strong>{{ pokemon.defense }}</strong><br>
+                                <small class="text-muted">DEF</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- View Details Button -->
+                    <div class="mt-auto">
+                        <a href="{% url 'pokemon:detail' pokedex_id=pokemon.pokedex_id %}" 
+                           class="btn btn-pokemon w-100">
+                            <i class="fas fa-eye"></i> View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="alert alert-warning text-center">
+                <i class="fas fa-search fa-3x mb-3"></i>
+                <h4>No Pokémon Found</h4>
+                <p>Try adjusting your search criteria or <a href="{% url 'pokemon:list' %}">view all Pokémon</a>.</p>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+    <nav aria-label="Pokemon pagination" class="mt-5">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_type %}type={{ current_type }}&{% endif %}{% if current_generation %}generation={{ current_generation }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&{% endif %}{% if is_reverse %}reverse=true&{% endif %}page=1">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_type %}type={{ current_type }}&{% endif %}{% if current_generation %}generation={{ current_generation }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&{% endif %}{% if is_reverse %}reverse=true&{% endif %}page={{ page_obj.previous_page_number }}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_type %}type={{ current_type }}&{% endif %}{% if current_generation %}generation={{ current_generation }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&{% endif %}{% if is_reverse %}reverse=true&{% endif %}page={{ num }}">
+                            {{ num }}
+                        </a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_type %}type={{ current_type }}&{% endif %}{% if current_generation %}generation={{ current_generation }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&{% endif %}{% if is_reverse %}reverse=true&{% endif %}page={{ page_obj.next_page_number }}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_type %}type={{ current_type }}&{% endif %}{% if current_generation %}generation={{ current_generation }}&{% endif %}{% if current_sort %}sort={{ current_sort }}&{% endif %}{% if is_reverse %}reverse=true&{% endif %}page={{ paginator.num_pages }}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+
+{% csrf_token %}
+{% endblock %}
