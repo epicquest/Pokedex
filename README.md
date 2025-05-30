@@ -37,3 +37,7 @@ python manage.py sync_pokemon
 
 ## run server
 python manage.py runserver or gunicorn pokedexsite.wsgi
+
+![Built with Django](https://img.shields.io/badge/Built%20with-Django-green)
+![Python](https://img.shields.io/badge/Made%20with-Python-blue)
+
