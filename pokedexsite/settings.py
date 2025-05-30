@@ -23,10 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-s%^ia(*+9f@4u6g^@35*@7qk2po=lp^g8_q&(hs_78hjh!*)9('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
 
+ALLOWED_HOSTS = ['https://pokedex-o9f1.onrender.com', 'localhost']
 
 # Application definition
 
