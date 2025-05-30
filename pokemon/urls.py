@@ -7,7 +7,6 @@ urlpatterns = [
     path('', views.PokemonListView.as_view(), name='list'),
     path('pokemon/<str:pk>/', views.PokemonDetailView.as_view(), name='detail'),
 
-    path('favorites/', views.favorites_list, name='favorites'),
     path('random/', views.random_pokemon, name='random'),
 
     # API endpoints
@@ -16,4 +15,9 @@ urlpatterns = [
 
     # Actions
     path('pokemon/<int:pokedex_id>/favorite/', views.toggle_favorite, name='toggle_favorite'),
+
+    # Favorites URLs
+    path('favorites/', views.favorites_view, name='favorites'),
+    path('toggle-favorite/<int:pokemon_id>/', views.toggle_favorite, name='toggle_favorite'),
+    path('clear-favorites/', views.clear_favorites, name='clear_favorites'),
 ]

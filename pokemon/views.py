@@ -1,10 +1,16 @@
 import random
 
+import requests
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.core.cache import cache
+from django.contrib import messages
+
 from django.core.paginator import Paginator
 from django.shortcuts import redirect
 
 from django.views.generic import ListView, DetailView
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 from django.db.models import Q
 from django.urls import reverse
 
@@ -53,19 +59,6 @@ class PokemonListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-
-        # pokemon = context.get('pokemon_list')[0]
-        # session_key = self.request.session.session_key
-        # if session_key:
-        #     from .models import UserFavorite
-        #     context['is_favorited'] = UserFavorite.objects.filter(
-        #         session_key=session_key,
-        #         pokemon=pokemon
-        #     ).exists()
-        # else:
-        #     context['is_favorited'] = False
-
         session_key = self.request.session.session_key
         if not session_key:
             self.request.session.save()
@@ -86,41 +79,6 @@ class PokemonListView(ListView):
         context['is_reverse'] = self.request.GET.get('reverse') == 'true'
 
         return context
-
-
-# class PokemonDetailView(DetailView):
-#     model = Pokemon
-#     template_name = 'pokemon/pokemon_detail.html'
-#     context_object_name = 'pokemon'
-#     slug_field = 'pokedex_id'
-#     slug_url_kwarg = 'pokedex_id'
-#
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         pokemon = self.get_object()
-#
-#         # Get evolution data (simplified - you might want to implement proper evolution chains)
-#         context['evolutions'] = Pokemon.objects.filter(
-#             pokedex_id__in=[pokemon.pokedex_id - 1, pokemon.pokedex_id + 1]
-#         ).exclude(pokedex_id=pokemon.pokedex_id)
-#
-#         # Check if this Pokemon is in favorites
-#         session_key = self.request.session.session_key
-#         if session_key:
-#             context['is_favorite'] = UserFavorite.objects.filter(
-#                 session_key=session_key,
-#                 pokemon=pokemon
-#             ).exists()
-#         else:
-#             context['is_favorite'] = False
-#
-#         # Get related Pokemon (same type)
-#         context['related_pokemon'] = Pokemon.objects.filter(
-#             types__in=pokemon.types.all()
-#         ).exclude(id=pokemon.id).distinct()[:6]
-#
-#         return context
-#
 
 
 class PokemonDetailView(DetailView):
@@ -329,43 +287,35 @@ def toggle_favorite(request, pokedex_id):
         request.session.create()
 
     session_key = request.session.session_key
-    pokemon = get_object_or_404(Pokemon, pokedex_id=pokedex_id)
+    try:
+        pokemon = get_object_or_404(Pokemon, pokedex_id=pokedex_id)
 
-    favorite, created = UserFavorite.objects.get_or_create(
-        session_key=session_key,
-        pokemon=pokemon
-    )
+        favorite, created = UserFavorite.objects.get_or_create(
+            session_key=session_key,
+            pokemon=pokemon
+        )
 
-    if not created:
-        favorite.delete()
-        is_favorite = False
-        action = 'removed from'
-    else:
-        is_favorite = True
-        action = 'added to'
+        if not created:
+            favorite.delete()
+            is_favorite = False
+            action = 'removed from'
+        else:
+            is_favorite = True
+            action = 'added to'
 
-    if request.headers.get('Content-Type') == 'application/json':
-        return JsonResponse({
-            'is_favorite': is_favorite,
-            'message': f'{pokemon.name.title()} {action} favorites'
-        })
+        if request.headers.get('Content-Type') == 'application/json':
+            return JsonResponse({
+                'is_favorite': is_favorite,
+                'message': f'{pokemon.name.title()} {action} favorites'
+            })
 
-    messages.success(request, f'{pokemon.name.title()} {action} favorites!')
+        messages.success(request, f'{pokemon.name.title()} {action} favorites!')
+    except Exception as e:
+             return JsonResponse({
+                 'success': False,
+                 'error': str(e)
+             }, status=400)
     return redirect('pokemon:detail', pk=pokedex_id)
-
-
-def favorites_list(request):
-    """List user's favorite Pokemon."""
-    if not request.session.session_key:
-        favorites = []
-    else:
-        favorites = UserFavorite.objects.filter(
-            session_key=request.session.session_key
-        ).select_related('pokemon').order_by('-created_at')
-
-    return render(request, 'pokemon/favorites.html', {
-        'favorites': favorites
-    })
 
 
 def pokemon_stats_json(request, pokedex_id):
@@ -398,235 +348,6 @@ def random_pokemon(request):
         messages.error(request, "No Pokemon found in database!")
         return redirect('pokemon:list')
 
-
-import requests
-import logging
-from django.shortcuts import render, get_object_or_404
-from django.http import Http404, JsonResponse
-from django.core.cache import cache
-from django.views.decorators.cache import cache_page
-from django.utils.decorators import method_decorator
-from django.views.generic import DetailView
-from django.contrib import messages
-
-logger = logging.getLogger(__name__)
-
-
-class PokemonAPIClient:
-    """Client for interacting with PokeAPI"""
-    BASE_URL = "https://pokeapi.co/api/v2"
-
-    @staticmethod
-    def get_pokemon_data(pokemon_id_or_name):
-        """Fetch Pokemon data from PokeAPI with caching"""
-        cache_key = f"pokemon_{pokemon_id_or_name}"
-        cached_data = cache.get(cache_key)
-
-        if cached_data:
-            return cached_data
-
-        try:
-            url = f"{PokemonAPIClient.BASE_URL}/pokemon/{pokemon_id_or_name.lower()}"
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-
-            data = response.json()
-            # Cache for 1 hour
-            cache.set(cache_key, data, 3600)
-            return data
-
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching Pokemon data for {pokemon_id_or_name}: {e}")
-            return None
-
-    @staticmethod
-    def get_pokemon_species(pokemon_id):
-        """Fetch Pokemon species data for evolution chain and descriptions"""
-        cache_key = f"species_{pokemon_id}"
-        cached_data = cache.get(cache_key)
-
-        if cached_data:
-            return cached_data
-
-        try:
-            url = f"{PokemonAPIClient.BASE_URL}/pokemon-species/{pokemon_id}"
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-
-            data = response.json()
-            cache.set(cache_key, data, 3600)
-            return data
-
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching species data for {pokemon_id}: {e}")
-            return None
-
-    @staticmethod
-    def get_evolution_chain(chain_url):
-        """Fetch evolution chain data"""
-        cache_key = f"evolution_{chain_url.split('/')[-2]}"
-        cached_data = cache.get(cache_key)
-
-        if cached_data:
-            return cached_data
-
-        try:
-            response = requests.get(chain_url, timeout=10)
-            response.raise_for_status()
-
-            data = response.json()
-            cache.set(cache_key, data, 3600)
-            return data
-
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching evolution chain: {e}")
-            return None
-
-
-# def pokemon_detail(request, pokemon_id):
-#     """Display detailed information about a specific Pokemon"""
-#     try:
-#         # Fetch main Pokemon data
-#         pokemon_data = PokemonAPIClient.get_pokemon_data(pokemon_id)
-#         if not pokemon_data:
-#             messages.error(request, f"Pokemon with ID/name '{pokemon_id}' not found or API unavailable.")
-#             raise Http404("Pokemon not found")
-#
-#         # Fetch species data for additional info
-#         species_data = PokemonAPIClient.get_pokemon_species(pokemon_data['id'])
-#
-#         # Process Pokemon data
-#         context = {
-#             'pokemon': process_pokemon_data(pokemon_data, species_data),
-#             'stats': process_stats_data(pokemon_data.get('stats', [])),
-#             'abilities': process_abilities_data(pokemon_data.get('abilities', [])),
-#             'types': [type_info['type']['name'] for type_info in pokemon_data.get('types', [])],
-#             'moves': process_moves_data(pokemon_data.get('moves', [])[:10]),  # Limit to first 10 moves
-#         }
-#
-#         # Add evolution chain if available
-#         if species_data and species_data.get('evolution_chain'):
-#             evolution_data = PokemonAPIClient.get_evolution_chain(species_data['evolution_chain']['url'])
-#             if evolution_data:
-#                 context['evolution_chain'] = process_evolution_chain(evolution_data['chain'])
-#
-#         return render(request, 'pokemon/detail.html', context)
-#
-#     except Exception as e:
-#         logger.error(f"Error in pokemon_detail view: {e}")
-#         messages.error(request, "An error occurred while loading Pokemon data.")
-#         raise Http404("Pokemon not found")
-
-
-def process_pokemon_data(pokemon_data, species_data=None):
-    """Process and clean Pokemon data for template"""
-    processed = {
-        'id': pokemon_data['id'],
-        'name': pokemon_data['name'].title(),
-        'height': pokemon_data['height'] / 10,  # Convert to meters
-        'weight': pokemon_data['weight'] / 10,  # Convert to kg
-        'base_experience': pokemon_data.get('base_experience', 0),
-        'sprite_front': pokemon_data['sprites'].get('front_default'),
-        'sprite_back': pokemon_data['sprites'].get('back_default'),
-        'sprite_shiny_front': pokemon_data['sprites'].get('front_shiny'),
-        'sprite_artwork': pokemon_data['sprites']['other']['official-artwork'].get('front_default'),
-    }
-
-    if species_data:
-        # Add description (flavor text)
-        flavor_texts = species_data.get('flavor_text_entries', [])
-        english_texts = [entry for entry in flavor_texts if entry['language']['name'] == 'en']
-        if english_texts:
-            processed['description'] = english_texts[0]['flavor_text'].replace('\n', ' ').replace('\f', ' ')
-
-        # Add generation info
-        processed['generation'] = species_data.get('generation', {}).get('name', 'Unknown')
-        processed['capture_rate'] = species_data.get('capture_rate', 0)
-        processed['base_happiness'] = species_data.get('base_happiness', 0)
-
-    return processed
-
-
-def process_stats_data(stats):
-    """Process Pokemon stats for display"""
-    stat_mapping = {
-        'hp': 'HP',
-        'attack': 'Attack',
-        'defense': 'Defense',
-        'special-attack': 'Sp. Attack',
-        'special-defense': 'Sp. Defense',
-        'speed': 'Speed'
-    }
-
-    processed_stats = []
-    total_stats = 0
-
-    for stat in stats:
-        stat_name = stat['stat']['name']
-        base_stat = stat['base_stat']
-        total_stats += base_stat
-
-        processed_stats.append({
-            'name': stat_mapping.get(stat_name, stat_name.title()),
-            'base_stat': base_stat,
-            'percentage': min(100, (base_stat / 255) * 100)  # For progress bars
-        })
-
-    return {
-        'individual': processed_stats,
-        'total': total_stats
-    }
-
-
-def process_abilities_data(abilities):
-    """Process Pokemon abilities"""
-    return [
-        {
-            'name': ability['ability']['name'].replace('-', ' ').title(),
-            'is_hidden': ability['is_hidden'],
-            'slot': ability['slot']
-        }
-        for ability in abilities
-    ]
-
-
-def process_moves_data(moves):
-    """Process Pokemon moves (limited set)"""
-    return [
-        {
-            'name': move['move']['name'].replace('-', ' ').title(),
-            'learn_method': move['version_group_details'][0]['move_learn_method']['name'] if move[
-                'version_group_details'] else 'Unknown',
-            'level_learned': move['version_group_details'][0]['level_learned_at'] if move[
-                'version_group_details'] else 0
-        }
-        for move in moves
-    ]
-
-
-def process_evolution_chain(chain_data):
-    """Process evolution chain data"""
-
-    def extract_evolution_info(chain):
-        evolutions = []
-        current = chain
-
-        while current:
-            pokemon_name = current['species']['name']
-            evolutions.append({
-                'name': pokemon_name.title(),
-                'id': current['species']['url'].split('/')[-2],  # Extract ID from URL
-            })
-
-            # Move to next evolution (take first if multiple)
-            if current.get('evolves_to'):
-                current = current['evolves_to'][0]
-            else:
-                current = None
-
-        return evolutions
-
-    return extract_evolution_info(chain_data)
 
 
 
@@ -708,86 +429,6 @@ def pokemon_list(request):
     }
 
     return render(request, 'pokemon/list.html', context)
-
-
-# def pokemon_compare(request):
-#     """Compare two Pokemon side by side"""
-#     pokemon1_id = request.GET.get('pokemon1')
-#     pokemon2_id = request.GET.get('pokemon2')
-#
-#     if not pokemon1_id or not pokemon2_id:
-#         # Show comparison form
-#         all_pokemon = Pokemon.objects.all().order_by('pokedex_id')
-#         return render(request, 'pokemon/compare.html', {
-#             'all_pokemon': all_pokemon,
-#             'show_form': True
-#         })
-#
-#     try:
-#         if pokemon1_id.isdigit():
-#             pokemon1 = get_object_or_404(Pokemon, pokedex_id=int(pokemon1_id))
-#         else:
-#             pokemon1 = get_object_or_404(Pokemon, name__iexact=pokemon1_id)
-#
-#         if pokemon2_id.isdigit():
-#             pokemon2 = get_object_or_404(Pokemon, pokedex_id=int(pokemon2_id))
-#         else:
-#             pokemon2 = get_object_or_404(Pokemon, name__iexact=pokemon2_id)
-#
-#         # Prepare comparison data
-#         comparison_data = {
-#             'pokemon1': {
-#                 'pokemon': pokemon1,
-#                 'types': pokemon1.types.all(),
-#                 'abilities': pokemon1.ability_links.select_related('ability').all(),
-#                 'stats': [
-#                     {'name': 'HP', 'value': pokemon1.hp},
-#                     {'name': 'Attack', 'value': pokemon1.attack},
-#                     {'name': 'Defense', 'value': pokemon1.defense},
-#                     {'name': 'Sp. Attack', 'value': pokemon1.special_attack},
-#                     {'name': 'Sp. Defense', 'value': pokemon1.special_defense},
-#                     {'name': 'Speed', 'value': pokemon1.speed},
-#                 ]
-#             },
-#             'pokemon2': {
-#                 'pokemon': pokemon2,
-#                 'types': pokemon2.types.all(),
-#                 'abilities': pokemon2.ability_links.select_related('ability').all(),
-#                 'stats': [
-#                     {'name': 'HP', 'value': pokemon2.hp},
-#                     {'name': 'Attack', 'value': pokemon2.attack},
-#                     {'name': 'Defense', 'value': pokemon2.defense},
-#                     {'name': 'Sp. Attack', 'value': pokemon2.special_attack},
-#                     {'name': 'Sp. Defense', 'value': pokemon2.special_defense},
-#                     {'name': 'Speed', 'value': pokemon2.speed},
-#                 ]
-#             }
-#         }
-#
-#         # Calculate stat differences
-#         stat_comparison = []
-#         for i, stat in enumerate(comparison_data['pokemon1']['stats']):
-#             stat1_val = stat['value']
-#             stat2_val = comparison_data['pokemon2']['stats'][i]['value']
-#             stat_comparison.append({
-#                 'name': stat['name'],
-#                 'pokemon1': stat1_val,
-#                 'pokemon2': stat2_val,
-#                 'difference': stat1_val - stat2_val,
-#                 'winner': 1 if stat1_val > stat2_val else 2 if stat2_val > stat1_val else 0
-#             })
-#
-#         comparison_data['stat_comparison'] = stat_comparison
-#         comparison_data['total_stats'] = {
-#             'pokemon1': pokemon1.total_stats,
-#             'pokemon2': pokemon2.total_stats,
-#         }
-#
-#         return render(request, 'pokemon/compare.html', comparison_data)
-#
-#     except Pokemon.DoesNotExist:
-#         messages.error(request, "One or both Pokemon not found.")
-#         return render(request, 'pokemon/compare.html', {'error': 'Pokemon not found'})
 
 
 def pokemon_random(request):
@@ -909,49 +550,131 @@ def user_favorites(request):
     return render(request, 'pokemon/favorites.html', context)
 
 
-# API endpoints
-def pokemon_detail_api(request, pokemon_id):
-    """API endpoint returning Pokemon data as JSON"""
+
+def favorites_view(request):
+    """Display user's favorite Pokemon"""
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+
+    # Get user's favorite Pokemon
+    favorite_objects = UserFavorite.objects.filter(session_key=session_key).select_related('pokemon')
+    favorite_pokemon = [fav.pokemon for fav in favorite_objects]
+
+    # Add stats percentage to each Pokemon (max possible stats is around 720)
+    for pokemon in favorite_pokemon:
+        pokemon.stats_percentage = min(round((pokemon.total_stats / 720) * 100, 1), 100)
+
+    # Handle sorting
+    sort_param = request.GET.get('sort', 'pokedex_id')
+
+    if sort_param == 'date_added':
+        # Sort by when they were added to favorites (most recent first)
+        favorite_objects = favorite_objects.order_by('-created_at')
+        favorite_pokemon = [fav.pokemon for fav in favorite_objects]
+    elif sort_param == 'total_stats':
+        # Sort by total stats (highest first)
+        favorite_pokemon = sorted(favorite_pokemon, key=lambda p: p.total_stats, reverse=True)
+    elif sort_param in ['pokedex_id', 'name', 'hp', 'attack', 'defense', 'speed']:
+        # Sort by Pokemon attributes
+        reverse = sort_param not in ['pokedex_id', 'name']  # Numeric stats should be descending
+        favorite_pokemon = sorted(favorite_pokemon, key=lambda p: getattr(p, sort_param), reverse=reverse)
+
+    # Calculate statistics
+    stats = {}
+    if favorite_pokemon:
+        # Type distribution with colors
+        type_info = {}
+        for pokemon in favorite_pokemon:
+            for ptype in pokemon.types.all():
+                if ptype.name not in type_info:
+                    type_info[ptype.name] = {'count': 0, 'color': ptype.color}
+                type_info[ptype.name]['count'] += 1
+
+        stats['type_distribution'] = type_info
+
+        # Average stats
+        total_stats = [pokemon.total_stats for pokemon in favorite_pokemon]
+        stats['average_stats'] = sum(total_stats) / len(total_stats) if total_stats else 0
+
+        # Strongest Pokemon
+        stats['strongest_pokemon'] = max(favorite_pokemon, key=lambda p: p.total_stats)
+
+    context = {
+        'favorite_pokemon': favorite_pokemon,
+        'current_sort': sort_param,
+        'type_distribution': stats.get('type_distribution', {}),
+        'average_stats': stats.get('average_stats', 0),
+        'strongest_pokemon': stats.get('strongest_pokemon'),
+    }
+
+    return render(request, 'pokemon/favorites.html', context)
+
+
+# @require_POST
+# def toggle_favorite(request, pokemon_id):
+#     """Toggle favorite status for a Pokemon"""
+#     session_key = request.session.session_key
+#     if not session_key:
+#         request.session.create()
+#         session_key = request.session.session_key
+#
+#     try:
+#         pokemon = get_object_or_404(Pokemon, pokedex_id=pokemon_id)
+#         favorite, created = UserFavorite.objects.get_or_create(
+#             session_key=session_key,
+#             pokemon=pokemon
+#         )
+#
+#         if created:
+#             is_favorite = True
+#             message = f"{pokemon.name} added to favorites!"
+#         else:
+#             favorite.delete()
+#             is_favorite = False
+#             message = f"{pokemon.name} removed from favorites!"
+#
+#         return JsonResponse({
+#             'success': True,
+#             'is_favorite': is_favorite,
+#             'message': message
+#         })
+#
+#     except Exception as e:
+#         return JsonResponse({
+#             'success': False,
+#             'error': str(e)
+#         }, status=400)
+
+
+@require_POST
+def clear_favorites(request):
+    """Clear all favorites for the current session"""
+    session_key = request.session.session_key
+    if not session_key:
+        return JsonResponse({'success': True, 'message': 'No favorites to clear'})
+
     try:
-        if pokemon_id.isdigit():
-            pokemon = get_object_or_404(Pokemon, pokedex_id=int(pokemon_id))
-        else:
-            pokemon = get_object_or_404(Pokemon, name__iexact=pokemon_id)
+        deleted_count = UserFavorite.objects.filter(session_key=session_key).delete()[0]
+        return JsonResponse({
+            'success': True,
+            'message': f'Cleared {deleted_count} favorites',
+            'count': deleted_count
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
 
-        data = {
-            'id': pokemon.pokedex_id,
-            'name': pokemon.name,
-            'height': pokemon.height_meters,
-            'weight': pokemon.weight_kg,
-            'base_experience': pokemon.base_experience,
-            'is_legendary': pokemon.is_legendary,
-            'is_mythical': pokemon.is_mythical,
-            'sprites': {
-                'front': pokemon.sprite_front,
-                'back': pokemon.sprite_back,
-                'artwork': pokemon.official_artwork,
-            },
-            'stats': {
-                'hp': pokemon.hp,
-                'attack': pokemon.attack,
-                'defense': pokemon.defense,
-                'special_attack': pokemon.special_attack,
-                'special_defense': pokemon.special_defense,
-                'speed': pokemon.speed,
-                'total': pokemon.total_stats,
-            },
-            'types': [t.name for t in pokemon.types.all()],
-            'abilities': [
-                {
-                    'name': link.ability.name,
-                    'is_hidden': link.is_hidden,
-                    'slot': link.slot,
-                }
-                for link in pokemon.ability_links.select_related('ability').all()
-            ],
-        }
 
-        return JsonResponse(data)
+def get_favorite_ids(request):
+    """Helper function to get favorite Pokemon IDs for current session"""
+    session_key = request.session.session_key
+    if not session_key:
+        return []
 
-    except Pokemon.DoesNotExist:
-        return JsonResponse({'error': 'Pokemon not found'}, status=404)
+    return list(UserFavorite.objects.filter(
+        session_key=session_key
+    ).values_list('pokemon_id', flat=True))

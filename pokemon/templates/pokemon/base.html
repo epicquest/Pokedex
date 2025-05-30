@@ -135,6 +135,145 @@
         .search-result {
             background: linear-gradient(45deg, var(--pokemon-light), var(--pokemon-gray));
         }
+
+        .favorite-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            color: #ccc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .favorite-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .favorite-btn.favorited {
+            color: #e74c3c;
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .favorite-btn.favorited:hover {
+            color: #c0392b;
+        }
+
+        /* Stats cards */
+        .card.bg-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+
+        .card.bg-success {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+        }
+
+        .card.bg-warning {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+        }
+
+        .card.bg-danger {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important;
+        }
+
+        /* Pokemon card hover effects */
+        .pokemon-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .pokemon-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+
+        /* Type badges */
+        .type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Progress bars for stats */
+        .progress {
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #ffd89b 0%, #19547b 100%);
+        }
+
+        /* Empty state styles */
+        .text-center.py-5 {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .favorite-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+
+            .pokemon-sprite {
+                width: 120px !important;
+                height: 120px !important;
+            }
+
+            .card-body .row .col-4 {
+                margin-bottom: 10px;
+            }
+        }
+
+        /* Animation for card removal */
+        .pokemon-card.removing {
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        /* Loading state */
+        .btn-loading {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .btn-loading::after {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-left: 8px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
         .test {
             background: rgba(255, 0, 0, 1);
         }
