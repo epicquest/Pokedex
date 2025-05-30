@@ -4,15 +4,9 @@ from . import views
 app_name = 'pokemon'
 
 urlpatterns = [
-    # path('', views.home, name='home'),
     path('', views.PokemonListView.as_view(), name='list'),
-    # path('pokemon/<str:pk>/', views.PokemonDetailView.as_view(), name='pokemon-detail'),
-    #path('pokemon/<int:pokedex_id>/', views.PokemonDetailView.as_view(), name='detail'),
-    # path('pokemon/<str:pk>/',  views.PokemonDetailView.as_view(), name='detail'),
     path('pokemon/<str:pk>/', views.PokemonDetailView.as_view(), name='detail'),
-    #  path('pokemon/<int:pokedex_id>/', views.PokemonDetailView.as_view(), name='detail'),
 
-    path('compare/', views.pokemon_compare, name='compare'),
     path('favorites/', views.favorites_list, name='favorites'),
     path('random/', views.random_pokemon, name='random'),
 

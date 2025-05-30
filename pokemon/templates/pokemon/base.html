@@ -83,7 +83,7 @@
             padding: 2rem;
             margin-bottom: 2rem;
         }
-     .footer {
+        .footer {
                 background: rgba(0, 0, 0, 0.8);
                 color: white;
                 text-align: center;
@@ -91,14 +91,6 @@
                 margin-top: 3rem;
             }
 
-:root {
-            --pokemon-red: #ff1744;
-            --pokemon-blue: #11508e;
-            --pokemon-yellow: #ffeb3b;
-            --pokemon-dark: #2b3d41;
-            --pokemon-light: #d6e1e4;
-            --pokemon-gray: #d6e1e4;
-        }
 
         .btn-pokemon {
             background: linear-gradient(45deg, var(--pokemon-dark), var(--pokemon-blue));
@@ -135,7 +127,7 @@
             transform: scale(1.1);
         }
 
-        .favorite-btn.active {
+        .favorite-btn.favorited {
             color: var(--pokemon-red);
         }
 
@@ -167,11 +159,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'pokemon:list' %}">
                             <i class="fas fa-list"></i> All Pokémon
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'pokemon:compare' %}">
-                            <i class="fas fa-balance-scale"></i> Compare
                         </a>
                     </li>
                     <li class="nav-item">
@@ -237,10 +224,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.is_favorite) {
-                    button.classList.add('active');
+                    button.classList.add('favorited');
                     button.innerHTML = '<i class="fas fa-heart"></i>';
                 } else {
-                    button.classList.remove('active');
+                    button.classList.remove('favorited');
                     button.innerHTML = '<i class="far fa-heart"></i>';
                 }
 

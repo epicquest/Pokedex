@@ -92,10 +92,13 @@
         <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
             <div class="card pokemon-card h-100 position-relative">
                 <!-- Favorite Button -->
-                <button class="favorite-btn" onclick="toggleFavorite({{ pokemon.pokedex_id }}, this)">
-                    <i class="far fa-heart"></i>
-                </button>
-                
+
+
+                 <button class="favorite-btn {% if pokemon.id in favorite_ids %}favorited{% endif %}"
+                    onclick="toggleFavorite({{ pokemon.pokedex_id }}, this)">
+                <i class="{% if pokemon.id in favorite_ids %}fas{% else %}far{% endif %} fa-heart"></i>
+                 </button>
+
                 <!-- Pokemon Image -->
                 <div class="text-center p-3">
                     {% if pokemon.official_artwork %}

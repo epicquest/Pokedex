@@ -24,7 +24,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(#e7effd, #f9fbff 0%, #d4d8e0 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -39,7 +39,7 @@
         }
 
         .header {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            background: linear-gradient(45deg, var(--pokemon-dark), var(--pokemon-blue));
             padding: 30px;
             text-align: center;
             color: white;
@@ -232,7 +232,7 @@
 
         .stat-fill {
             height: 100%;
-            background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+            background: linear-gradient(90deg, var(--pokemon-light), var(--pokemon-gray));
             border-radius: 10px;
             transition: width 0.8s ease;
         }
@@ -407,6 +407,7 @@
                     onclick="toggleFavorite({{ pokemon.pokedex_id }})">
                 {% if is_favorited %}★ Favorited{% else %}☆ Add to Favorites{% endif %}
             </button>
+
         </div>
 
         <div class="content">
@@ -610,7 +611,7 @@
             .then(response => response.json())
             .then(data => {
                 const btn = document.querySelector('.favorite-btn');
-                if (data.is_favorited) {
+                if (data.is_favorite) {
                     btn.textContent = '★ Favorited';
                     btn.classList.add('favorited');
                 } else {

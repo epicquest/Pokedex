@@ -9,7 +9,6 @@ from django.db.models import Q
 from django.urls import reverse
 
 from .models import Pokemon, PokemonType, UserFavorite, Evolution, EvolutionChain
-from .services import PokemonDataManager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -54,12 +53,38 @@ class PokemonListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+
+        # pokemon = context.get('pokemon_list')[0]
+        # session_key = self.request.session.session_key
+        # if session_key:
+        #     from .models import UserFavorite
+        #     context['is_favorited'] = UserFavorite.objects.filter(
+        #         session_key=session_key,
+        #         pokemon=pokemon
+        #     ).exists()
+        # else:
+        #     context['is_favorited'] = False
+
+        session_key = self.request.session.session_key
+        if not session_key:
+            self.request.session.save()
+            session_key = self.request.session.session_key
+
+        favorite_ids = set(
+            UserFavorite.objects.filter(session_key=session_key)
+            .values_list('pokemon_id', flat=True)
+        )
+
+        context['favorite_ids'] = favorite_ids
+        print(context['favorite_ids'])
         context['pokemon_types'] = PokemonType.objects.all().order_by('name')
         context['current_search'] = self.request.GET.get('search', '')
         context['current_type'] = self.request.GET.get('type', '')
         context['current_generation'] = self.request.GET.get('generation', '')
         context['current_sort'] = self.request.GET.get('sort', 'pokedex_id')
         context['is_reverse'] = self.request.GET.get('reverse') == 'true'
+
         return context
 
 
@@ -152,7 +177,6 @@ class PokemonDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         pokemon = self.object
-
         # Get evolution chain information
         evolution_data = self.get_evolution_data(pokemon)
         context.update(evolution_data)
@@ -292,37 +316,10 @@ def pokemon_search_api(request):
             'id': p.pokedex_id,
             'name': p.name.title(),
             'sprite': p.sprite_front,
-            'url': reverse('pokemon:detail', kwargs={'pokedex_id': p.pokedex_id})
+            'url': reverse('pokemon:detail', kwargs={'pk': p.pokedex_id})
         })
 
     return JsonResponse({'results': results})
-
-
-def pokemon_compare(request):
-    """Pokemon comparison view."""
-    pokemon1_id = request.GET.get('pokemon1')
-    pokemon2_id = request.GET.get('pokemon2')
-
-    context = {
-        'pokemon1': None,
-        'pokemon2': None,
-        'comparison': None,
-        'all_pokemon': Pokemon.objects.all().order_by('pokedex_id')
-    }
-
-    if pokemon1_id and pokemon2_id:
-        try:
-            comparison = PokemonDataManager.get_pokemon_stats_comparison(
-                int(pokemon1_id), int(pokemon2_id)
-            )
-            if comparison:
-                context['pokemon1'] = Pokemon.objects.get(pokedex_id=pokemon1_id)
-                context['pokemon2'] = Pokemon.objects.get(pokedex_id=pokemon2_id)
-                context['comparison'] = comparison
-        except (ValueError, Pokemon.DoesNotExist):
-            messages.error(request, "Invalid Pokemon selected for comparison.")
-
-    return render(request, 'pokemon/pokemon_compare.html', context)
 
 
 @require_http_methods(["POST"])
@@ -354,7 +351,7 @@ def toggle_favorite(request, pokedex_id):
         })
 
     messages.success(request, f'{pokemon.name.title()} {action} favorites!')
-    return redirect('pokemon:detail', pokedex_id=pokedex_id)
+    return redirect('pokemon:detail', pk=pokedex_id)
 
 
 def favorites_list(request):
@@ -396,7 +393,7 @@ def random_pokemon(request):
     """Redirect to a random Pokemon."""
     pokemon = Pokemon.objects.order_by('?').first()
     if pokemon:
-        return redirect('pokemon:detail', pokedex_id=pokemon.pokedex_id)
+        return redirect('pokemon:detail', pk=pokemon.pokedex_id)
     else:
         messages.error(request, "No Pokemon found in database!")
         return redirect('pokemon:list')
@@ -632,55 +629,6 @@ def process_evolution_chain(chain_data):
     return extract_evolution_info(chain_data)
 
 
-# API endpoint for AJAX requests
-# def pokemon_detail_api(request, pokemon_id):
-#     """API endpoint returning Pokemon data as JSON"""
-#     pokemon_data = PokemonAPIClient.get_pokemon_data(pokemon_id)
-#     if not pokemon_data:
-#         return JsonResponse({'error': 'Pokemon not found'}, status=404)
-#
-#     species_data = PokemonAPIClient.get_pokemon_species(pokemon_data['id'])
-#
-#     return JsonResponse({
-#         'pokemon': process_pokemon_data(pokemon_data, species_data),
-#         'stats': process_stats_data(pokemon_data.get('stats', [])),
-#         'abilities': process_abilities_data(pokemon_data.get('abilities', [])),
-#         'types': [type_info['type']['name'] for type_info in pokemon_data.get('types', [])],
-#     })
-#
-#
-# def pokemon_compare(request):
-#     """Compare two Pokemon side by side"""
-#     pokemon1_id = request.GET.get('pokemon1')
-#     pokemon2_id = request.GET.get('pokemon2')
-#
-#     if not pokemon1_id or not pokemon2_id:
-#         return render(request, 'pokemon/compare.html', {
-#             'error': 'Please provide two Pokemon to compare'
-#         })
-#
-#     pokemon1_data = PokemonAPIClient.get_pokemon_data(pokemon1_id)
-#     pokemon2_data = PokemonAPIClient.get_pokemon_data(pokemon2_id)
-#
-#     if not pokemon1_data or not pokemon2_data:
-#         return render(request, 'pokemon/compare.html', {
-#             'error': 'One or both Pokemon not found'
-#         })
-#
-#     context = {
-#         'pokemon1': {
-#             'data': process_pokemon_data(pokemon1_data),
-#             'stats': process_stats_data(pokemon1_data.get('stats', [])),
-#             'types': [type_info['type']['name'] for type_info in pokemon1_data.get('types', [])],
-#         },
-#         'pokemon2': {
-#             'data': process_pokemon_data(pokemon2_data),
-#             'stats': process_stats_data(pokemon2_data.get('stats', [])),
-#             'types': [type_info['type']['name'] for type_info in pokemon2_data.get('types', [])],
-#         }
-#     }
-#
-#     return render(request, 'pokemon/compare.html', context)
 
 def pokemon_detail(request, pokedex_id):
     """Detail view for a specific Pokemon"""
@@ -715,95 +663,6 @@ def pokemon_detail(request, pokedex_id):
     }
 
     return render(request, 'pokemon/detail.html', context)
-# def pokemon_detail(request, pokemon_id):
-#     """Display detailed information about a specific Pokemon"""
-#     try:
-#         # Try to get Pokemon by pokedex_id first, then by name
-#         if pokemon_id.isdigit():
-#             pokemon = get_object_or_404(Pokemon, pokedex_id=int(pokemon_id))
-#         else:
-#             pokemon = get_object_or_404(Pokemon, name__iexact=pokemon_id)
-#
-#         # Get related data
-#         abilities = pokemon.ability_links.select_related('ability').all()
-#         types = pokemon.types.all()
-#
-#         # Get evolution chain
-#         evolution_chain = []
-#         try:
-#             # Get evolutions where this Pokemon evolves FROM
-#             evolutions_from = Evolution.objects.filter(from_pokemon=pokemon).select_related('to_pokemon')
-#             # Get evolutions where this Pokemon evolves TO
-#             evolutions_to = Evolution.objects.filter(to_pokemon=pokemon).select_related('from_pokemon')
-#
-#             # Build a simple evolution chain
-#             for evo in evolutions_to:
-#                 evolution_chain.append({
-#                     'pokemon': evo.from_pokemon,
-#                     'direction': 'from'
-#                 })
-#
-#             evolution_chain.append({
-#                 'pokemon': pokemon,
-#                 'direction': 'current'
-#             })
-#
-#             for evo in evolutions_from:
-#                 evolution_chain.append({
-#                     'pokemon': evo.to_pokemon,
-#                     'direction': 'to'
-#                 })
-#
-#         except Exception as e:
-#             logger.warning(f"Could not load evolution chain for {pokemon.name}: {e}")
-#
-#         # Process stats for display
-#         stats = [
-#             {'name': 'HP', 'value': pokemon.hp, 'percentage': (pokemon.hp / 255) * 100},
-#             {'name': 'Attack', 'value': pokemon.attack, 'percentage': (pokemon.attack / 255) * 100},
-#             {'name': 'Defense', 'value': pokemon.defense, 'percentage': (pokemon.defense / 255) * 100},
-#             {'name': 'Sp. Attack', 'value': pokemon.special_attack, 'percentage': (pokemon.special_attack / 255) * 100},
-#             {'name': 'Sp. Defense', 'value': pokemon.special_defense,
-#              'percentage': (pokemon.special_defense / 255) * 100},
-#             {'name': 'Speed', 'value': pokemon.speed, 'percentage': (pokemon.speed / 255) * 100},
-#         ]
-#
-#         # Check if this Pokemon is in user's favorites
-#         session_key = request.session.session_key
-#         if not session_key:
-#             request.session.create()
-#             session_key = request.session.session_key
-#
-#         is_favorite = UserFavorite.objects.filter(
-#             session_key=session_key,
-#             pokemon=pokemon
-#         ).exists()
-#
-#         # Get next and previous Pokemon for navigation
-#         next_pokemon = Pokemon.objects.filter(pokedex_id__gt=pokemon.pokedex_id).first()
-#         prev_pokemon = Pokemon.objects.filter(pokedex_id__lt=pokemon.pokedex_id).last()
-#
-#         context = {
-#             'pokemon': pokemon,
-#             'abilities': abilities,
-#             'types': types,
-#             'stats': stats,
-#             'total_stats': pokemon.total_stats,
-#             'evolution_chain': evolution_chain,
-#             'is_favorite': is_favorite,
-#             'next_pokemon': next_pokemon,
-#             'prev_pokemon': prev_pokemon,
-#         }
-#
-#         return render(request, 'pokemon/detail.html', context)
-#
-#     except Pokemon.DoesNotExist:
-#         messages.error(request, f"Pokemon '{pokemon_id}' not found in database.")
-#         return render(request, 'pokemon/not_found.html', {'pokemon_id': pokemon_id})
-#     except Exception as e:
-#         logger.error(f"Error in pokemon_detail view: {e}")
-#         messages.error(request, "An error occurred while loading Pokemon data.")
-#         raise Http404("Pokemon not found")
 
 
 def pokemon_list(request):
@@ -944,7 +803,7 @@ def pokemon_random(request):
     random_offset = random.randint(0, pokemon_count - 1)
     random_pokemon = Pokemon.objects.all()[random_offset]
 
-    return redirect('pokemon:detail', pokemon_id=random_pokemon.pokedex_id)
+    return redirect('pokemon:detail', pk=random_pokemon.pokedex_id)
 
 
 def pokemon_by_type(request, type_name):
@@ -1030,45 +889,6 @@ def pokemon_search(request):
     }
 
     return render(request, 'pokemon/search.html', context)
-
-
-def toggle_favorite(request, pokemon_id):
-    """Toggle Pokemon favorite status"""
-    if request.method == 'POST':
-        try:
-            pokemon = get_object_or_404(Pokemon, pokedex_id=pokemon_id)
-
-            # Ensure session exists
-            if not request.session.session_key:
-                request.session.create()
-
-            session_key = request.session.session_key
-
-            favorite, created = UserFavorite.objects.get_or_create(
-                session_key=session_key,
-                pokemon=pokemon
-            )
-
-            if not created:
-                favorite.delete()
-                is_favorite = False
-            else:
-                is_favorite = True
-
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'is_favorite': is_favorite})
-            else:
-                return redirect('pokemon:detail', pokemon_id=pokemon_id)
-
-        except Exception as e:
-            logger.error(f"Error toggling favorite: {e}")
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'error': 'Failed to toggle favorite'}, status=500)
-            else:
-                messages.error(request, "Failed to update favorite status.")
-                return redirect('pokemon:detail', pokemon_id=pokemon_id)
-
-    return redirect('pokemon:list')
 
 
 def user_favorites(request):

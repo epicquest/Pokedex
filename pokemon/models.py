@@ -105,7 +105,6 @@ class Evolution(models.Model):
 
 
 class UserFavorite(models.Model):
-    # Simple model to track favorites (can be extended with user auth later)
     session_key = models.CharField(max_length=40)
     pokemon = models.ForeignKey(Pokemon, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
