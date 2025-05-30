@@ -1,0 +1,28 @@
+ <style>
+
+
+        .btn-pokemon {
+            background: linear-gradient(45deg, var(--pokemon-dark), var(--pokemon-blue));
+            border: none;
+            color: white;
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-pokemon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+
+
+        .search-result {
+            background: linear-gradient(45deg, var(--pokemon-light), var(--pokemon-gray));
+        }
+        .test {
+            background: rgba(255, 0, 0, 1);
+        }
+
+ </style>

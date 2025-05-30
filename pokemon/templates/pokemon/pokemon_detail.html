@@ -1,10 +1,654 @@
+
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>detail</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ pokemon.name|title }} - Pokédex</title>
+    <style>
+:root {
+            --pokemon-red: #ff1744;
+            --pokemon-blue: #11508e;
+            --pokemon-yellow: #ffeb3b;
+            --pokemon-dark: #2b3d41;
+            --pokemon-light: #d6e1e4;
+            --pokemon-gray: #d6e1e4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .pokemon-number {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .pokemon-name {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .favorite-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .favorite-btn:hover {
+            background: white;
+            color: #ff6b6b;
+        }
+
+        .favorite-btn.favorited {
+            background: #ffd700;
+            border-color: #ffd700;
+            color: #333;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 40px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .nav-btn {
+          background: linear-gradient(45deg, var(--pokemon-dark), var(--pokemon-blue));
+            border: none;
+            color: white;
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+        .nav-btn.disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            padding: 40px;
+        }
+
+        .image-section {
+            text-align: center;
+        }
+
+        .pokemon-image {
+            max-width: 300px;
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+        }
+
+        .info-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #4ecdc4;
+            padding-bottom: 10px;
+        }
+
+        .basic-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        .types {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .type-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+
+        /* Default type colors */
+        .type-normal { background-color: #A8A878; }
+        .type-fire { background-color: #F08030; }
+        .type-water { background-color: #6890F0; }
+        .type-electric { background-color: #F8D030; }
+        .type-grass { background-color: #78C850; }
+        .type-ice { background-color: #98D8D8; }
+        .type-fighting { background-color: #C03028; }
+        .type-poison { background-color: #A040A0; }
+        .type-ground { background-color: #E0C068; }
+        .type-flying { background-color: #A890F0; }
+        .type-psychic { background-color: #F85888; }
+        .type-bug { background-color: #A8B820; }
+        .type-rock { background-color: #B8A038; }
+        .type-ghost { background-color: #705898; }
+        .type-dragon { background-color: #7038F8; }
+        .type-dark { background-color: #705848; }
+        .type-steel { background-color: #B8B8D0; }
+        .type-fairy { background-color: #EE99AC; }
+
+        .stats {
+            margin-top: 30px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-name {
+            font-weight: bold;
+            color: #666;
+            min-width: 120px;
+        }
+
+        .stat-bar {
+            flex: 1;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+            border-radius: 10px;
+            transition: width 0.8s ease;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #333;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .abilities {
+            margin-top: 30px;
+        }
+
+        .ability-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .ability-badge {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+
+        .ability-badge.hidden {
+            background: #ff6b6b;
+        }
+
+        .evolution {
+            margin-top: 40px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .evolution h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .evolution-chain {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .evolution-pokemon {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 15px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .evolution-pokemon:hover {
+            transform: translateY(-5px);
+        }
+
+        .evolution-pokemon.current {
+            background: #4ecdc4;
+            color: white;
+        }
+
+        .evolution-pokemon img {
+            width: 80px;
+            height: 80px;
+        }
+
+        .evolution-pokemon a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .evolution-arrow {
+            font-size: 2em;
+            color: #4ecdc4;
+        }
+
+        .related-pokemon {
+            margin-top: 40px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .related-card {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .related-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .related-card img {
+            width: 60px;
+            height: 60px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+
+            .navigation {
+                padding: 15px 20px;
+            }
+
+            .pokemon-name {
+                font-size: 2em;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .evolution, .related-pokemon {
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <!-- Navigation -->
+        <div class="navigation">
+            {% if prev_pokemon %}
+                <a href="{% url 'pokemon:detail' prev_pokemon.pokedex_id %}" class="nav-btn " >
+                    ← #{{ prev_pokemon.pokedex_id|stringformat:"03d" }} {{ prev_pokemon.name|title }}
+                </a>
+            {% else %}
+                <span class="nav-btn disabled">← Previous</span>
+            {% endif %}
 
+            <a href="{% url 'pokemon:list' %}" class="nav-btn">Back to List</a>
+
+            {% if next_pokemon %}
+                <a href="{% url 'pokemon:detail' next_pokemon.pokedex_id %}" class="nav-btn test">
+                    #{{ next_pokemon.pokedex_id|stringformat:"03d" }} {{ next_pokemon.name|title }} →
+                </a>
+            {% else %}
+                <span class="nav-btn disabled">Next →</span>
+            {% endif %}
+        </div>
+
+        <div class="header " >
+            <div class="pokemon-number">#{{ pokemon.pokedex_id|stringformat:"03d" }}</div>
+            <h1 class="pokemon-name">{{ pokemon.name|title }}</h1>
+            <button class="favorite-btn {% if is_favorited %}favorited{% endif %}"
+                    onclick="toggleFavorite({{ pokemon.pokedex_id }})">
+                {% if is_favorited %}★ Favorited{% else %}☆ Add to Favorites{% endif %}
+            </button>
+        </div>
+
+        <div class="content">
+            <div class="image-section">
+                {% if pokemon.official_artwork %}
+                    <img src="{{ pokemon.official_artwork }}" alt="{{ pokemon.name }}" class="pokemon-image">
+                {% elif pokemon.sprite_front %}
+                    <img src="{{ pokemon.sprite_front }}" alt="{{ pokemon.name }}" class="pokemon-image">
+                {% else %}
+                    <div class="pokemon-image" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999; height: 300px;">
+                        No Image Available
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="info-section">
+                <h2>Basic Information</h2>
+                <div class="basic-info">
+                    <div class="types">
+                        {% for type in pokemon.types.all %}
+                            <span class="type-badge type-{{ type.name|lower }}" {% if type.color %}style="background-color: {{ type.color }};"{% endif %}>
+                                {{ type.name }}
+                            </span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Height</div>
+                            <div class="info-value">{{ pokemon.height_meters }}m</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Weight</div>
+                            <div class="info-value">{{ pokemon.weight_kg }}kg</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Base Experience</div>
+                            <div class="info-value">{{ pokemon.base_experience }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Total Stats</div>
+                            <div class="info-value">{{ pokemon.total_stats }}</div>
+                        </div>
+                    </div>
+
+                    {% if pokemon.is_legendary or pokemon.is_mythical %}
+                        <div style="text-align: center; margin-top: 15px;">
+                            {% if pokemon.is_legendary %}
+                                <span style="background: #ffd700; color: #333; padding: 5px 15px; border-radius: 15px; font-weight: bold;">
+                                    ⭐ Legendary
+                                </span>
+                            {% endif %}
+                            {% if pokemon.is_mythical %}
+                                <span style="background: #ff6b6b; color: white; padding: 5px 15px; border-radius: 15px; font-weight: bold;">
+                                    ✨ Mythical
+                                </span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="stats">
+                    <h3>Stats</h3>
+                    <div class="stat-item">
+                        <span class="stat-name">HP</span>
+                        <div class="stat-bar">
+                            <div class="stat-fill" style="width: {{ stats_percentages.hp|floatformat:1 }}%"></div>
+                        </div>
+                        <span class="stat-value">{{ pokemon.hp }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Attack</span>
+                        <div class="stat-bar">
+                            <div class="stat-fill" style="width: {{ stats_percentages.attack|floatformat:1 }}%"></div>
+                        </div>
+                        <span class="stat-value">{{ pokemon.attack }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Defense</span>
+                        <div class="stat-bar">
+                            <div class="stat-fill" style="width: {{ stats_percentages.defense|floatformat:1 }}%"></div>
+                        </div>
+                        <span class="stat-value">{{ pokemon.defense }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Sp. Attack</span>
+                        <div class="stat-bar">
+                            <div class="stat-fill" style="width: {{ stats_percentages.special_attack|floatformat:1 }}%"></div>
+                        </div>
+                        <span class="stat-value">{{ pokemon.special_attack }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Sp. Defense</span>
+                        <div class="stat-bar">
+                            <div class="stat-fill" style="width: {{ stats_percentages.special_defense|floatformat:1 }}%"></div>
+                        </div>
+                        <span class="stat-value">{{ pokemon.special_defense }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Speed</span>
+                        <div class="stat-bar">
+                            <div class="stat-fill" style="width: {{ stats_percentages.speed|floatformat:1 }}%"></div>
+                        </div>
+                        <span class="stat-value">{{ pokemon.speed }}</span>
+                    </div>
+                </div>
+
+                {% if pokemon.ability_links.all %}
+                <div class="abilities">
+                    <h3>Abilities</h3>
+                    <div class="ability-list">
+                        {% for ability_link in pokemon.ability_links.all %}
+                            <span class="ability-badge {% if ability_link.is_hidden %}hidden{% endif %}">
+                                {{ ability_link.ability.name|title }}
+                                {% if ability_link.is_hidden %}(Hidden){% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Evolution Section -->
+        {% if pre_evolutions or evolutions %}
+        <div class="evolution">
+            <h2>Evolution Chain</h2>
+            <div class="evolution-chain">
+                {% for evolution in pre_evolutions %}
+                    <div class="evolution-pokemon">
+                        <a href="{% url 'pokemon:detail' evolution.pokemon.pokedex_id %}">
+                            {% if evolution.pokemon.sprite_front %}
+                                <img src="{{ evolution.pokemon.sprite_front }}" alt="{{ evolution.pokemon.name }}">
+                            {% endif %}
+                            <div>{{ evolution.pokemon.name|title }}</div>
+                            <small>#{{ evolution.pokemon.pokedex_id|stringformat:"03d" }}</small>
+                        </a>
+                    </div>
+                    <div class="evolution-arrow">→</div>
+                {% endfor %}
+
+                <div class="evolution-pokemon current">
+                    {% if pokemon.sprite_front %}
+                        <img src="{{ pokemon.sprite_front }}" alt="{{ pokemon.name }}">
+                    {% endif %}
+                    <div><strong>{{ pokemon.name|title }}</strong></div>
+                    <small>#{{ pokemon.pokedex_id|stringformat:"03d" }}</small>
+                </div>
+
+                {% for evolution in evolutions %}
+                    <div class="evolution-arrow">→</div>
+                    <div class="evolution-pokemon">
+                        <a href="{% url 'pokemon:detail' evolution.pokemon.pokedex_id %}">
+                            {% if evolution.pokemon.sprite_front %}
+                                <img src="{{ evolution.pokemon.sprite_front }}" alt="{{ evolution.pokemon.name }}">
+                            {% endif %}
+                            <div>{{ evolution.pokemon.name|title }}</div>
+                            <small>#{{ evolution.pokemon.pokedex_id|stringformat:"03d" }}</small>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Related Pokemon Section -->
+        {% if related_pokemon %}
+        <div class="related-pokemon">
+            <h2>Related Pokemon</h2>
+            <div class="related-grid">
+                {% for related in related_pokemon %}
+                    <a href="{% url 'pokemon:detail' related.pokedex_id %}" class="related-card">
+                        {% if related.sprite_front %}
+                            <img src="{{ related.sprite_front }}" alt="{{ related.name }}">
+                        {% endif %}
+                        <div>{{ related.name|title }}</div>
+                        <small>#{{ related.pokedex_id|stringformat:"03d" }}</small>
+                        <div class="types" style="margin-top: 5px; font-size: 0.8em;">
+                            {% for type in related.types.all %}
+                                <span class="type-badge type-{{ type.name|lower }}" style="padding: 2px 6px; font-size: 0.7em;">
+                                    {{ type.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function toggleFavorite(pokemonId) {
+            fetch(`/pokemon/${pokemonId}/favorite/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                const btn = document.querySelector('.favorite-btn');
+                if (data.is_favorited) {
+                    btn.textContent = '★ Favorited';
+                    btn.classList.add('favorited');
+                } else {
+                    btn.textContent = '☆ Add to Favorites';
+                    btn.classList.remove('favorited');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Animate stat bars on page load
+        window.addEventListener('load', function() {
+            const statFills = document.querySelectorAll('.stat-fill');
+            statFills.forEach(fill => {
+                const width = fill.style.width;
+                fill.style.width = '0%';
+                setTimeout(() => {
+                    fill.style.width = width;
+                }, 500);
+            });
+        });
+    </script>
 </body>
 </html>

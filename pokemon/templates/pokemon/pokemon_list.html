@@ -1,6 +1,7 @@
+
 {% extends 'pokemon/base.html' %}
 
-{% block title %}Pokedex - All Pokémon{% endblock %}
+{% block title %}Pokémon List{% endblock %}
 
 {% block content %}
 <!-- Search and Filter Section -->
@@ -152,7 +153,7 @@
                     
                     <!-- View Details Button -->
                     <div class="mt-auto">
-                        <a href="{% url 'pokemon:detail' pokedex_id=pokemon.pokedex_id %}" 
+                        <a href="{% url 'pokemon:detail' pk=pokemon.pokedex_id %}"
                            class="btn btn-pokemon w-100">
                             <i class="fas fa-eye"></i> View Details
                         </a>

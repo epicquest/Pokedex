@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Pokedex{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -26,7 +28,6 @@
             font-weight: bold;
             font-size: 1.5rem;
         }
-
         .pokemon-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             border: none;
@@ -82,6 +83,22 @@
             padding: 2rem;
             margin-bottom: 2rem;
         }
+     .footer {
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                text-align: center;
+                padding: 2rem 0;
+                margin-top: 3rem;
+            }
+
+:root {
+            --pokemon-red: #ff1744;
+            --pokemon-blue: #11508e;
+            --pokemon-yellow: #ffeb3b;
+            --pokemon-dark: #2b3d41;
+            --pokemon-light: #d6e1e4;
+            --pokemon-gray: #d6e1e4;
+        }
 
         .btn-pokemon {
             background: linear-gradient(45deg, var(--pokemon-dark), var(--pokemon-blue));
@@ -122,13 +139,7 @@
             color: var(--pokemon-red);
         }
 
-        .footer {
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            text-align: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-        }
+
         .search-result {
             background: linear-gradient(45deg, var(--pokemon-light), var(--pokemon-gray));
         }
@@ -136,13 +147,13 @@
             background: rgba(255, 0, 0, 1);
         }
 
-    </style>
+     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-        <div class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top ">
+        <div class="container ">
             <a class="navbar-brand" href="{% url 'pokemon:list' %}">
                 <i class="fas fa-dragon text-warning"></i> Pokedex
             </a>
@@ -168,7 +179,7 @@
                             <i class="fas fa-heart"></i> Favorites
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item ">
                         <a class="nav-link" href="{% url 'pokemon:random' %}">
                             <i class="fas fa-random"></i> Random
                         </a>
@@ -200,7 +211,7 @@
     {% endif %}
 
     <!-- Main Content -->
-    <main class="container my-4">
+    <main class="container  my-4">
         {% block content %}{% endblock %}
     </main>
 
