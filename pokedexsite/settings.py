@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-s%^ia(*+9f@4u6g^@35*@7qk2po=lp^g8_q&(hs_78hjh!*)9(
 DEBUG = False
 
 
-ALLOWED_HOSTS = ['https://pokedex-o9f1.onrender.com', 'localhost']
+ALLOWED_HOSTS = ['pokedex-o9f1.onrender.com', 'localhost', '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
