@@ -601,7 +601,7 @@
 
     <script>
         function toggleFavorite(pokemonId) {
-            fetch(`/pokemon/${pokemonId}/favorite/`, {
+            fetch(`/${pokemonId}/favorite/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken'),

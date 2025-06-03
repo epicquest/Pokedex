@@ -70,7 +70,6 @@ class PokemonListView(ListView):
         )
 
         context['favorite_ids'] = favorite_ids
-        print(context['favorite_ids'])
         context['pokemon_types'] = PokemonType.objects.all().order_by('name')
         context['current_search'] = self.request.GET.get('search', '')
         context['current_type'] = self.request.GET.get('type', '')
@@ -611,45 +610,9 @@ def favorites_view(request):
 
     return render(request, 'pokemon/favorites.html', context)
 
-
-# @require_POST
-# def toggle_favorite(request, pokemon_id):
-#     """Toggle favorite status for a Pokemon"""
-#     session_key = request.session.session_key
-#     if not session_key:
-#         request.session.create()
-#         session_key = request.session.session_key
-#
-#     try:
-#         pokemon = get_object_or_404(Pokemon, pokedex_id=pokemon_id)
-#         favorite, created = UserFavorite.objects.get_or_create(
-#             session_key=session_key,
-#             pokemon=pokemon
-#         )
-#
-#         if created:
-#             is_favorite = True
-#             message = f"{pokemon.name} added to favorites!"
-#         else:
-#             favorite.delete()
-#             is_favorite = False
-#             message = f"{pokemon.name} removed from favorites!"
-#
-#         return JsonResponse({
-#             'success': True,
-#             'is_favorite': is_favorite,
-#             'message': message
-#         })
-#
-#     except Exception as e:
-#         return JsonResponse({
-#             'success': False,
-#             'error': str(e)
-#         }, status=400)
-
-
 @require_POST
 def clear_favorites(request):
+
     """Clear all favorites for the current session"""
     session_key = request.session.session_key
     if not session_key:

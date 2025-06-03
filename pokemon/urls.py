@@ -14,10 +14,9 @@ urlpatterns = [
     path('api/pokemon/<int:pokedex_id>/stats/', views.pokemon_stats_json, name='stats_api'),
 
     # Actions
-    path('pokemon/<int:pokedex_id>/favorite/', views.toggle_favorite, name='toggle_favorite'),
+    path('<int:pokedex_id>/favorite/', views.toggle_favorite, name='toggle_favorite'),
 
     # Favorites URLs
     path('favorites/', views.favorites_view, name='favorites'),
-    path('toggle-favorite/<int:pokemon_id>/', views.toggle_favorite, name='toggle_favorite'),
     path('clear-favorites/', views.clear_favorites, name='clear_favorites'),
 ]
